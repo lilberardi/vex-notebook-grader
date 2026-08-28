@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VEX Engineering Notebook Judge</title>
+<style>
+/* =========================================================
+   VEX ENGINEERING NOTEBOOK JUDGE
+   Large single-file client-side practice grader
+   ========================================================= */
+:root{
+  --bg:#080c14;--panel:#111827;--panel2:#172235;--panel3:#0d1421;
+  --line:#2b3a55;--blue:#4da3ff;--muted:#9aa8bf;--text:#eef3fb;
+  --good:#49d17d;--warn:#f4c84b;--bad:#f56b7d;--shadow:0 12px 30px rgba(0,0,0,.18);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:linear-gradient(135deg,#070b12,#0c1220);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.app{max-width:1320px;margin:auto;padding:26px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:20px}
+.brand h1{margin:0;font-size:30px;letter-spacing:-.5px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:14px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:0;border-radius:9px;padding:10px 15px;background:var(--blue);color:#06101d;font-weight:800}
+.btn.secondary{background:#26344d;color:#fff}
+.btn.ghost{background:transparent;color:#cdd7e8;border:1px solid var(--line)}
+.btn.danger{background:#40202a;color:#ffd9df}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.card{background:rgba(17,24,39,.96);border:1px solid var(--line);border-radius:16px;padding:20px;margin:16px 0;box-shadow:var(--shadow)}
+.card h2,.card h3{margin-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
+input,textarea,select{width:100%;background:#0a101b;color:#fff;border:1px solid #34445f;border-radius:9px;padding:10px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)}
+textarea{min-height:110px;resize:vertical}
+.drop{margin-top:14px;border:2px dashed #3b4e70;border-radius:14px;padding:35px;text-align:center;background:#0d1421;transition:.2s}
+.drop.drag{border-color:var(--blue);background:#101d32}
+.status{margin-top:10px;color:var(--muted);font-size:13px}
+.status.good{color:var(--good)}
+.status.bad{color:var(--bad)}
+.progressline{height:9px;background:#26334b;border-radius:99px;overflow:hidden;margin-top:10px}
+.progressline>div{height:100%;width:0;background:var(--blue);transition:.25s}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.metric{background:var(--panel2);padding:14px;border-radius:11px}
+.metric small{display:block;color:var(--muted)}
+.metric b{display:block;font-size:24px;margin-top:5px}
+.section{margin-top:28px}
+.section-title{display:flex;justify-content:space-between;gap:15px;align-items:end;margin-bottom:10px}
+.section-title h2{margin:0;font-size:21px}
+.section-score{font-weight:900;color:#cbd6e7}
+.criterion{border:1px solid var(--line);border-radius:13px;margin:10px 0;overflow:hidden;background:#0e1624}
+.criterion-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px;background:#141e30}
+.criterion-name{font-weight:800}
+.score{font-size:20px;font-weight:900;white-space:nowrap}
+.s4{color:var(--good)}.s3{color:var(--blue)}.s2{color:var(--warn)}.s1{color:var(--bad)}
+.criterion-body{padding:16px}
+.label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.judge-comment{line-height:1.62;margin:6px 0 15px}
+.box{background:#0a101b;border-radius:10px;padding:12px;margin-top:7px;line-height:1.55}
+.chip{display:inline-block;background:#263651;border-radius:16px;padding:4px 8px;margin:2px;font-size:12px;color:#d7e1ef}
+.rubricbox{border-left:3px solid var(--blue);background:#0d1523;padding:12px;margin-top:12px;line-height:1.58;color:#cbd5e5}
+.improve{margin-top:13px;line-height:1.58}
+.improve ul{margin:7px 0 0 20px;padding:0}
+.improve li{margin:5px 0}
+.evidence-pages{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.page-link{background:#20304a;color:#dce8f8;border:1px solid #344968;border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer}
+.override{display:grid;grid-template-columns:190px 1fr;gap:10px;margin-top:13px}
+.small{font-size:12px;color:var(--muted)}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.priority{border:1px solid var(--line);background:#101827;border-radius:10px;padding:13px;margin:8px 0}
+.priority b{display:block;margin-bottom:4px}
+.good-list,.bad-list{margin:0;padding-left:20px;line-height:1.7}
+.viewer-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.viewer-tools .btn{padding:8px 12px}
+.viewer-shell{display:grid;grid-template-columns:205px minmax(0,1fr);gap:12px;align-items:start}
+.viewer-side{background:#0a101b;border:1px solid var(--line);border-radius:12px;padding:9px;max-height:560px;overflow:auto}
+.viewer-side-title{font-weight:800;font-size:13px;margin-bottom:8px}
+.viewer-main{min-width:0}
+.viewer{background:#070b12;border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto;text-align:center;min-height:320px;max-height:560px;display:flex;align-items:flex-start;justify-content:center}
+.viewer img{width:55%;max-width:760px;min-width:360px;height:auto;display:block;background:#fff;box-shadow:0 5px 25px #000;border-radius:4px;transform-origin:top center;transition:width .18s ease}
+.viewer-meta{color:var(--muted);font-size:13px;margin:0 0 8px}
+.viewer-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+.page-number{background:#0a101b;border:1px solid var(--line);border-radius:8px;padding:7px 10px;color:#dce6f5;font-size:13px}
+.thumbs{display:flex;flex-direction:column;gap:6px}
+.thumb{width:100%;border:2px solid transparent;border-radius:7px;padding:2px;background:#0a101b;cursor:pointer}
+.thumb.active{border-color:var(--blue);background:#14243a}
+.thumb img{width:100%;display:block;border-radius:4px;background:#fff}
+.all-pages{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
+.page-card{background:#0a101b;border:1px solid var(--line);border-radius:9px;padding:6px;cursor:pointer;transition:.15s}
+.page-card:hover{border-color:#4a6287;transform:translateY(-1px)}
+.page-card img{display:block;width:100%;background:#fff;border-radius:5px}
+.page-card small{display:block;color:var(--muted);padding:4px 2px 1px}
+.viewer-hint{font-size:12px;color:var(--muted);margin-top:7px}
+.search-row{display:grid;grid-template-columns:1fr 150px;gap:8px}
+.search-results{max-height:330px;overflow:auto;margin-top:9px}
+.search-result{padding:10px;border-bottom:1px solid var(--line);cursor:pointer}
+.search-result:hover{background:#141f31}
+.search-result b{display:block}
+.search-result span{font-size:12px;color:var(--muted)}
+.empty{color:var(--muted);padding:14px 0}
+.hidden{display:none!important}
+.notice{background:#151a22;border:1px solid #384252;border-radius:10px;padding:12px;color:#bdc8d8;line-height:1.55}
+.pill{display:inline-block;padding:4px 8px;border-radius:20px;background:#24334d;color:#dce6f5;font-size:12px}
+.toast{position:fixed;right:18px;bottom:18px;background:#162238;border:1px solid #405678;padding:12px 15px;border-radius:10px;box-shadow:var(--shadow);z-index:50}
+
+.card-heading-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.quick-nav{position:sticky;top:10px;z-index:20;display:flex;gap:6px;flex-wrap:wrap;background:rgba(8,12,20,.94);backdrop-filter:blur(12px);border:1px solid var(--line);padding:8px;border-radius:12px;margin:0 0 16px;box-shadow:var(--shadow)}
+.quick-nav button{border:1px solid #34445f;background:#111b2b;color:#dce6f5;border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer}
+.quick-nav button:hover,.quick-nav button.active{background:#203452;border-color:var(--blue)}
+.section-scorecards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.section-scorecard{border:1px solid var(--line);background:#0d1523;border-radius:12px;padding:14px}
+.section-scorecard-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.section-scorecard-head h3{font-size:15px;margin:0}
+.section-total{font-weight:900;font-size:18px}
+.section-mini-bar{height:7px;background:#25334a;border-radius:99px;overflow:hidden;margin:7px 0 12px}
+.section-mini-bar div{height:100%;background:var(--blue)}
+.subscore{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #22304a;align-items:center}
+.subscore:last-child{border-bottom:0}
+.subscore-name{font-size:13px;color:#d9e3f1}
+.subscore-value{font-weight:900;white-space:nowrap}
+.score-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.dot4{background:var(--good)}.dot3{background:var(--blue)}.dot2{background:var(--yellow)}.dot1{background:var(--red)}
+.page-evidence-help{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.evidence-pages{display:flex;gap:6px;flex-wrap:wrap}
+.page-link{background:#182b46;color:#e1ebf9;border:1px solid #3c5575;border-radius:8px;padding:6px 9px;font-size:12px;font-weight:700;cursor:pointer}
+.page-link:hover{background:#244064;border-color:var(--blue)}
+.page-link.no-evidence{background:#151b25;border-color:#2c374a;color:var(--muted);cursor:default}
+.jump-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#101c2d;border:1px solid #324b6b;border-radius:9px;padding:9px 11px;margin:9px 0;color:#cbd8e9;font-size:12px}
+.jump-banner button{background:#263c5b;color:#fff;border:1px solid #46678f;padding:6px 9px;border-radius:7px;font-size:12px}
+
+.section-banner{font-size:12px;letter-spacing:.13em;font-weight:900;color:#91b9e6;margin:4px 0 10px}
+.section-label{font-size:11px;letter-spacing:.12em;font-weight:900;color:#7187a5;margin:24px 2px 7px}
+.report-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.report-preview{background:#0a101b;border:1px solid var(--line);border-radius:12px;padding:18px;line-height:1.55}
+.report-preview h3{margin:0 0 10px}
+.report-preview table{width:100%;border-collapse:collapse}
+.report-preview th,.report-preview td{padding:9px;border-bottom:1px solid #26344b;text-align:left}
+.report-preview th{color:#aebbd0;font-size:12px;text-transform:uppercase}
+.report-section{margin-top:20px;padding-top:12px;border-top:1px solid var(--line)}
+.report-criterion{padding:10px 0;border-bottom:1px solid #202d42}
+.report-criterion:last-child{border-bottom:0}
+.report-score{float:right;font-weight:900}
+@media(max-width:1050px){.metrics{grid-template-columns:repeat(3,1fr)}.all-pages{grid-template-columns:repeat(4,1fr)}.viewer-shell{grid-template-columns:180px 1fr}.viewer img{width:62%;min-width:280px}}
+@media(max-width:750px){.viewer-shell{grid-template-columns:1fr}.viewer-side{max-height:145px}.thumbs{flex-direction:row;overflow-x:auto}.thumb{flex:0 0 76px}.viewer img{width:72%;min-width:220px}.viewer{min-height:280px;padding:10px}.all-pages{grid-template-columns:repeat(3,1fr)}
+.grid2,.summary-grid,.override{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,1fr)}.all-pages{grid-template-columns:repeat(2,1fr)}.topbar{display:block}.actions{margin-top:12px}}
+.compact-mode .viewer-side{max-height:470px}
+.compact-mode .viewer{min-height:250px;max-height:500px;padding:10px}
+.compact-mode .viewer img{width:45%}
+.compact-mode .all-pages{grid-template-columns:repeat(8,1fr)}
+@media print{
+body{background:#fff;color:#111}.app{max-width:none;padding:10px}.card{box-shadow:none;border:1px solid #bbb;background:#fff}.drop,.actions,.viewer-tools,.thumbs,.search-row,.search-results,.override,.status{display:none!important}.viewer{max-height:none;border:1px solid #aaa}.all-pages{grid-template-columns:repeat(3,1fr)}.criterion{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="brand">
+    <h1>VEX Engineering Notebook Human-Style Grader</h1>
+    <p>Practice evaluation • exact rubric order • notebook text + page images • improvement coaching</p>
+  </div>
+  <div class="actions">
+    <button class="btn secondary" id="reportBtn">Graded Report</button>
+  </div>
+</header>
+
+<section class="card">
+  <div class="grid2">
+    <div class="field"><label>Team Number</label><input id="team" placeholder="123A"></div>
+    <div class="field"><label>Notebook Name</label><input id="notebookName" placeholder="Engineering Notebook"></div>
+  </div>
+  <div class="drop" id="drop">
+    <b>Upload Engineering Notebook PDF</b><br>
+    <span class="small">Every page is rendered and displayed at the bottom of the report.</span>
+    <input id="file" type="file" accept=".pdf" hidden>
+  </div>
+  <div class="controls">
+    <button class="btn" id="gradeBtn" disabled>Grade Notebook</button>
+    <button class="btn secondary" id="clearBtn">Clear</button>
+  </div>
+  <div id="status" class="status">No notebook loaded.</div>
+  <div class="progressline"><div id="loadProgress"></div></div>
+</section>
+
+<section id="results" class="hidden">
+  <div class="section-banner">GRADING DASHBOARD</div>
+  <div class="quick-nav" id="quickNav">
+    <button data-target="scorecard-card">1. Scorecard</button>
+    <button data-target="sectionBreak">2. Rubric Sections</button>
+    <button data-target="prioritiesCard">3. Improvements</button>
+    <button data-target="searchCard">4. Evidence Search</button>
+    <button data-target="criteriaCard">5. Judge Evaluation</button>
+    <button data-target="pagesCard">6. Notebook Viewer</button>
+    <button data-target="notesCard">7. Judge Notes</button>
+    <button data-target="reportCard">8. Graded Report</button>
+  </div>
+  <div class="section-label">01 · OVERALL SCORE</div>
+  <div class="card scorecard-card">
+    <div class="card-heading-row">
+      <div>
+        <h2>Scorecard</h2>
+        <p class="muted">See every major section, subsection, score, and points earned at a glance.</p>
+      </div>
+      <span class="pill">64 points possible</span>
+    </div>
+    <div class="metrics">
+      <div class="metric"><small>Total</small><b id="total">0/64</b></div>
+      <div class="metric"><small>Percent</small><b id="percent">0%</b></div>
+      <div class="metric"><small>4 / 4</small><b id="fourCount">0</b></div>
+      <div class="metric"><small>3 / 4</small><b id="threeCount">0</b></div>
+      <div class="metric"><small>2 / 4</small><b id="twoCount">0</b></div>
+      <div class="metric"><small>1 / 4</small><b id="oneCount">0</b></div>
+    </div>
+    <div class="progressline"><div id="scoreProgress"></div></div>
+    <p id="overallSummary" class="judge-comment"></p>
+  </div>
+
+  <div class="section-label">02 · RUBRIC BREAKDOWN</div>
+  <div class="card" id="sectionBreak">
+    <h2>Section Breakdown</h2>
+    <div id="sectionScorecards" class="section-scorecards"></div>
+  </div>
+
+  <div class="section-label">03 · IMPROVEMENT REPORT</div>
+  <div class="card" id="prioritiesCard">
+    <h2>What You Could Do Better</h2>
+    <div id="priorities"></div>
+  </div>
+
+  <div class="section-label">03A · STRENGTHS & WEAKNESSES</div>
+  <div class="card">
+    <h2>Strengths & Weaknesses</h2>
+    <div class="summary-grid">
+      <div><h3>Strengths</h3><ul id="strengths" class="good-list"></ul></div>
+      <div><h3>Weaknesses</h3><ul id="weaknesses" class="bad-list"></ul></div>
+    </div>
+  </div>
+
+  <div class="section-label">04 · NOTEBOOK EVIDENCE</div>
+  <div class="card" id="searchCard">
+    <h2>Find Something in the Notebook</h2>
+    <div class="search-row">
+      <input id="search" placeholder="Search for intake, autonomous, testing, data, CAD...">
+      <select id="searchPage"><option value="all">All pages</option></select>
+    </div>
+    <div id="searchResults" class="search-results"></div>
+  </div>
+
+  <div class="section-label">05 · HUMAN-STYLE JUDGE EVALUATION</div>
+  <div class="card" id="criteriaCard">
+    <h2>Detailed Rubric Review — Exact Order</h2>
+    <div class="notice">The automated assessment is a practice aid. Read the page evidence yourself and use the human score override when the notebook contains evidence the automated analysis missed.</div>
+    <div id="criteria"></div>
+  </div>
+
+  <div class="section-label">07 · FINAL JUDGE NOTES</div>
+  <div class="card" id="notesCard">
+    <h2>Overall Judge Notes</h2>
+    <textarea id="judgeNotes" placeholder="Write final comments, strengths, concerns, or recommendations..."></textarea>
+  </div>
+
+  <div class="section-label">06 · NOTEBOOK PAGE VIEWER</div>
+  <div class="card" id="pagesCard">
+    <h2>Notebook Pages</h2>
+    <p class="muted">All uploaded notebook pages appear below, in order. Photos, sketches, CAD, graphs, tables, handwriting, and code screenshots are preserved as page images.</p>
+    <div class="viewer-tools">
+      <button class="btn secondary" id="prevPage">← Previous</button>
+      <button class="btn secondary" id="nextPage">Next →</button>
+      <button class="btn" id="zoomIn">Zoom +</button>
+      <button class="btn" id="zoomOut">Zoom −</button>
+      <button class="btn secondary" id="zoomReset">Fit Page</button>
+      <button class="btn ghost" id="compactToggle">Compact View</button>
+    </div>
+    <div class="viewer-shell">
+      <aside class="viewer-side">
+        <div class="viewer-side-title">Pages</div>
+        <div class="thumbs" id="thumbs"></div>
+      </aside>
+      <div class="viewer-main">
+        <div class="viewer-nav">
+          <div class="viewer-meta" id="viewerMeta">Page 1</div>
+          <div class="page-number" id="viewerCounter">1 / 1</div>
+        </div>
+        <div class="viewer"><img id="viewerImage" alt="Notebook page"></div>
+        <div class="viewer-hint">Use the page thumbnails, arrow buttons, keyboard arrows, or click any page below.</div>
+      </div>
+    </div>
+    <h3 style="margin-top:24px">All Notebook Pages</h3>
+    <div class="all-pages" id="allPages"></div>
+  </div>
+
+  <div class="card">
+    <h2>Extracted Notebook Text</h2>
+    <textarea id="extractedText" readonly></textarea>
+  </div>
+<div class="section-label">08 · GRADED REPORT</div>
+  <div class="card" id="reportCard">
+    <div class="card-heading-row">
+      <div>
+        <h2>Graded Report</h2>
+        <p class="muted">Generate a clean rubric-based report using your current scores and human overrides.</p>
+      </div>
+      <span class="pill">Rubric-based</span>
+    </div>
+    <div class="report-actions">
+      <button class="btn" id="generateReportInline">Generate Graded Report</button>
+      <button class="btn secondary" id="printReportInline">Print Report</button>
+    </div>
+    <div id="reportPreview" class="report-preview">
+      <div class="empty">Your graded report preview will appear here.</div>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+
+<script type="module">
+/* =========================================================
+   PDF RENDERING
+   ========================================================= */
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+
+/* =========================================================
+   RUBRIC MODEL
+   The criterion order is intentionally fixed.
+   ========================================================= */
+const RUBRIC = [
+  {
+    section:"Notebook Organization",
+    description:"The notebook is organized and usable as a record of engineering work.",
+    items:[
+      {
+        name:"Information is easy to reference",
+        lookFor:"A judge can quickly locate important information using page numbers, a table of contents, an index, clear headings, or another logical organization.",
+        keys:["table of contents","contents","index","page number","page numbered","section","heading","entry","navigation"]
+      },
+      {
+        name:"Contributors are identifiable",
+        lookFor:"Entries clearly identify who contributed the work through names, initials, signatures, or other attribution.",
+        keys:["author","initials","signature","signed","contributor","team member","name","written by"]
+      },
+      {
+        name:"Record spans the season",
+        lookFor:"The notebook provides a sustained chronological record rather than a short final report.",
+        keys:["date","meeting","week","progress","next meeting","today","journal","log","season","timeline"]
+      },
+      {
+        name:"Outside sources are credited",
+        lookFor:"Outside research, information, designs, images, or other sources are identified and credited where appropriate.",
+        keys:["source","citation","reference","website","article","manual","credit","link","research"]
+      }
+    ]
+  },
+  {
+    section:"Engineering Design Process — Define",
+    description:"The team defines the engineering problem and the direction of the solution.",
+    items:[
+      {
+        name:"Criteria and constraints are defined",
+        lookFor:"The problem, criteria for success, and constraints that affect possible solutions are clearly established.",
+        keys:["criteria","constraint","requirement","objective","goal","limit","problem","target","must"]
+      },
+      {
+        name:"Game strategy is documented",
+        lookFor:"Game analysis and strategic priorities are documented and connected to robot design.",
+        keys:["game strategy","strategy","scoring","points","match","goal","priority","defense","offense","cycle"]
+      },
+      {
+        name:"Brainstorming is documented",
+        lookFor:"Multiple possible approaches, concepts, sketches, comparisons, or alternatives are documented.",
+        keys:["brainstorm","ideas","concepts","alternative","options","sketch","pros","cons","compare","possible"]
+      }
+    ]
+  },
+  {
+    section:"Engineering Design Process — Develop Solutions",
+    description:"The team develops, prototypes, tests, measures, and makes evidence-based decisions.",
+    items:[
+      {
+        name:"Prototypes are documented",
+        lookFor:"Connected prototype attempts or versions are documented well enough to understand progression.",
+        keys:["prototype","version 1","version 2","iteration","attempt","first version","second version","revision"]
+      },
+      {
+        name:"Test procedures are defined",
+        lookFor:"Tests describe what was tested, how it was tested, and the conditions needed to make the test meaningful or repeatable.",
+        keys:["test procedure","test setup","tested","trial","conditions","method","repeat","control","variable","procedure"]
+      },
+      {
+        name:"Data is collected",
+        lookFor:"Actual measured results are recorded and can be used to evaluate or compare solutions.",
+        keys:["data","results","seconds","score","measurement","inches","rpm","weight","table","graph","average"]
+      },
+      {
+        name:"Decisions are explained with evidence",
+        lookFor:"Engineering decisions are supported by observations, test results, measurements, or other evidence.",
+        keys:["decision","evidence","because","based on","results","chose","selected","decided","performance"]
+      }
+    ]
+  },
+  {
+    section:"Engineering Design Process — Optimize",
+    description:"The team documents technical details and uses results to improve the robot and code.",
+    items:[
+      {
+        name:"Mechanisms are documented",
+        lookFor:"Technical documentation explains mechanisms, components, geometry, dimensions, operation, and purpose.",
+        keys:["mechanism","gear","motor","intake","arm","lift","drivetrain","wheel","chain","pneumatic","dimension","diagram"]
+      },
+      {
+        name:"Code is documented",
+        lookFor:"Programming development, autonomous/driver logic, sensors, algorithms, pseudocode, flowcharts, screenshots, or meaningful notes are documented.",
+        keys:["code","programming","autonomous","auton","driver","sensor","pseudocode","flowchart","algorithm","program"]
+      },
+      {
+        name:"Changes are traceable to results",
+        lookFor:"The record connects a test/result to a problem, a change, and a subsequent result.",
+        keys:["changed","modified","revised","updated","after testing","test results","improved","because of","resulted in"]
+      }
+    ]
+  },
+  {
+    section:"Reflection and Iteration",
+    description:"The notebook shows learning and a continuing engineering cycle.",
+    items:[
+      {
+        name:"Reflection appears throughout",
+        lookFor:"The team repeatedly reflects on successes, failures, lessons, and next steps throughout the record.",
+        keys:["reflection","learned","lesson","what worked","what failed","next time","next step","mistake","successful","unsuccessful"]
+      },
+      {
+        name:"Iteration is visible in sequence",
+        lookFor:"Later solutions build on earlier work and learning, showing a visible sequence of improvement.",
+        keys:["iteration","next version","revised","updated","again","improved","version","cycle","previous","then"]
+      }
+    ]
+  }
+];
+
+/* =========================================================
+   APP STATE
+   ========================================================= */
+let notebook = {
+  fileName:"",
+  team:"",
+  name:"",
+  text:"",
+  pages:[]
+};
+let currentPage=0;
+let zoom=1;
+let gradeResults=[];
+let autosaveTimer=null;
+
+/* =========================================================
+   DOM HELPERS
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const fileInput=$("file");
+const drop=$("drop");
+const gradeBtn=$("gradeBtn");
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function toast(message){
+  const t=$("toast");
+  t.textContent=message;
+  t.classList.remove("hidden");
+  clearTimeout(toast.timer);
+  toast.timer=setTimeout(()=>t.classList.add("hidden"),2400);
+}
+
+function setStatus(message,type=""){
+  const s=$("status");
+  s.textContent=message;
+  s.className="status "+type;
+}
+
+/* =========================================================
+   FILE INPUT / DRAG DROP
+   ========================================================= */
+drop.addEventListener("click",()=>fileInput.click());
+fileInput.addEventListener("change",()=>{
+  if(fileInput.files && fileInput.files[0]) loadPdf(fileInput.files[0]);
+});
+drop.addEventListener("dragover",e=>{
+  e.preventDefault();
+  drop.classList.add("drag");
+});
+drop.addEventListener("dragleave",()=>{
+  drop.classList.remove("drag");
+});
+drop.addEventListener("drop",e=>{
+  e.preventDefault();
+  drop.classList.remove("drag");
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) loadPdf(e.dataTransfer.files[0]);
+});
+
+/* =========================================================
+   PDF LOADING + PAGE RENDERING
+   ========================================================= */
+async function loadPdf(file){
+  if(file.type!=="application/pdf"){
+    setStatus("Please upload a PDF file.","bad");
+    return;
+  }
+
+  setStatus("Opening notebook PDF...");
+  $("loadProgress").style.width="2%";
+
+  try{
+    const data=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data}).promise;
+
+    notebook.fileName=file.name;
+    notebook.pages=[];
+    notebook.text="";
+
+    const textParts=[];
+    const totalPages=pdf.numPages;
+
+    for(let pageNumber=1; pageNumber<=totalPages; pageNumber++){
+      const page=await pdf.getPage(pageNumber);
+      const textContent=await page.getTextContent();
+      const pageText=textContent.items.map(item=>item.str).join(" ");
+      textParts.push(pageText);
+
+      const viewport=page.getViewport({scale:1.25});
+      const canvas=document.createElement("canvas");
+      const context=canvas.getContext("2d",{alpha:false});
+      canvas.width=Math.ceil(viewport.width);
+      canvas.height=Math.ceil(viewport.height);
+
+      await page.render({
+        canvasContext:context,
+        viewport
+      }).promise;
+
+      notebook.pages.push({
+        number:pageNumber,
+        text:pageText,
+        image:canvas.toDataURL("image/jpeg",.82)
+      });
+
+      const progress=Math.round((pageNumber/totalPages)*100);
+      $("loadProgress").style.width=progress+"%";
+      setStatus(`Rendering page ${pageNumber} of ${totalPages}...`);
+    }
+
+    notebook.text=textParts.join("\n\n");
+    $("extractedText").value=notebook.text;
+    gradeBtn.disabled=false;
+    $("results").classList.remove("hidden");
+
+    renderPageViewer();
+    renderSearchPageOptions();
+    renderSearchResults("");
+    setStatus(`Loaded ${file.name} — ${totalPages} pages rendered.`,"good");
+
+    $("team").value=notebook.team;
+    $("notebookName").value=notebook.name;
+    window.scrollTo({top:$("results").offsetTop-10,behavior:"smooth"});
+  }catch(error){
+    console.error(error);
+    setStatus("The PDF could not be read or rendered.","bad");
+  }
+}
+
+/* =========================================================
+   PAGE VIEWER
+   ========================================================= */
+function renderPageViewer(){
+  if(!notebook.pages.length)return;
+
+  const p=notebook.pages[currentPage];
+  $("viewerImage").src=p.image;
+  $("viewerImage").style.width=(zoom*55)+"%";
+  $("viewerMeta").textContent=`Page ${p.number}`;
+  $("viewerCounter").textContent=`${p.number} / ${notebook.pages.length}`;
+
+  const thumbs=$("thumbs");
+  thumbs.innerHTML="";
+  notebook.pages.forEach((page,index)=>{
+    const button=document.createElement("button");
+    button.className="thumb"+(index===currentPage?" active":"");
+    button.title=`Go to page ${page.number}`;
+    button.innerHTML=`<img src="${page.image}" alt="Page ${page.number}">`;
+    button.addEventListener("click",()=>showPage(index));
+    thumbs.appendChild(button);
+  });
+
+  const allPages=$("allPages");
+  allPages.innerHTML="";
+  notebook.pages.forEach((page,index)=>{
+    const card=document.createElement("div");
+    card.className="page-card";
+    card.innerHTML=`<img src="${page.image}" alt="Notebook page ${page.number}"><small>Page ${page.number}</small>`;
+    card.addEventListener("click",()=>showPage(index));
+    allPages.appendChild(card);
+  });
+}
+
+function showPage(index){
+  if(!notebook.pages.length)return;
+  currentPage=Math.max(0,Math.min(index,notebook.pages.length-1));
+  renderPageViewer();
+}
+
+$("prevPage").addEventListener("click",()=>showPage(currentPage-1));
+$("nextPage").addEventListener("click",()=>showPage(currentPage+1));
+$("zoomIn").addEventListener("click",()=>{
+  zoom=Math.min(3,zoom+.15);
+  renderPageViewer();
+});
+$("zoomOut").addEventListener("click",()=>{
+  zoom=Math.max(.4,zoom-.15);
+  renderPageViewer();
+});
+$("zoomReset").addEventListener("click",()=>{
+  zoom=1;
+  renderPageViewer();
+});
+$("compactToggle").addEventListener("click",()=>{
+  document.body.classList.toggle("compact-mode");
+  $("compactToggle").textContent=document.body.classList.contains("compact-mode")?"Normal View":"Compact View";
+});
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+function renderSearchPageOptions(){
+  const select=$("searchPage");
+  select.innerHTML='<option value="all">All pages</option>';
+  notebook.pages.forEach(p=>{
+    const option=document.createElement("option");
+    option.value=String(p.number);
+    option.textContent=`Page ${p.number}`;
+    select.appendChild(option);
+  });
+}
+
+function renderSearchResults(query){
+  const box=$("searchResults");
+  const q=query.trim().toLowerCase();
+  const selected=$("searchPage").value;
+
+  if(!q){
+    box.innerHTML='<div class="empty">Type something to search the notebook.</div>';
+    return;
+  }
+
+  const results=[];
+  notebook.pages.forEach(page=>{
+    if(selected!=="all" && String(page.number)!==selected)return;
+    const lower=page.text.toLowerCase();
+    const position=lower.indexOf(q);
+    if(position>=0){
+      const start=Math.max(0,position-90);
+      const end=Math.min(page.text.length,position+180);
+      results.push({
+        page:page.number,
+        snippet:page.text.slice(start,end)
+      });
+    }
+  });
+
+  if(!results.length){
+    box.innerHTML='<div class="empty">No matching page text found.</div>';
+    return;
+  }
+
+  box.innerHTML=results.map(r=>`
+    <div class="search-result" data-page="${r.page}">
+      <b>Page ${r.page}</b>
+      <span>${escapeHtml(r.snippet)}</span>
+    </div>
+  `).join("");
+
+  box.querySelectorAll(".search-result").forEach(el=>{
+    el.addEventListener("click",()=>{
+      showPage(Number(el.dataset.page)-1);
+      $("viewerImage").scrollIntoView({behavior:"smooth",block:"center"});
+    });
+  });
+}
+
+$("search").addEventListener("input",e=>renderSearchResults(e.target.value));
+$("searchPage").addEventListener("change",()=>renderSearchResults($("search").value));
+
+/* =========================================================
+   HUMAN-STYLE PRACTICE EVALUATOR
+   This local evaluator uses context and evidence signals.
+   It is deliberately not an official VEX judging decision.
+   ========================================================= */
+function normalize(value){
+  return String(value||"").toLowerCase().replace(/\s+/g," ").trim();
+}
+
+function occurrences(text,key){
+  const t=normalize(text);
+  const k=normalize(key);
+  if(!k)return 0;
+  let count=0;
+  let start=0;
+  while(true){
+    const index=t.indexOf(k,start);
+    if(index<0)break;
+    count++;
+    start=index+k.length;
+  }
+  return count;
+}
+
+function pagesContaining(keys){
+  const found=[];
+  notebook.pages.forEach(page=>{
+    const t=normalize(page.text);
+    let score=0;
+    keys.forEach(key=>{
+      const k=normalize(key);
+      if(!k)return;
+      let pos=t.indexOf(k);
+      while(pos>=0){
+        score++;
+        pos=t.indexOf(k,pos+k.length);
+      }
+    });
+    /*
+      Only call a page "relevant" when it contains enough evidence
+      to be useful, instead of listing every page with a generic word.
+    */
+    if(score>=1){
+      const strongWords=["because","tested","result","changed","version","measured","why","decision","learned","next"];
+      const contextScore=strongWords.reduce((n,w)=>n+(t.includes(w)?1:0),0);
+      if(score>=2 || contextScore>=2 || t.length<260)found.push(page.number);
+    }
+  });
+  return found;
+}
+
+function scoreCriterion(item){
+  const text=notebook.text;
+  const keyHits=[];
+  let totalOccurrences=0;
+
+  item.keys.forEach(key=>{
+    const count=occurrences(text,key);
+    if(count>0){
+      keyHits.push({key,count});
+      totalOccurrences+=count;
+    }
+  });
+
+  const uniqueRatio=keyHits.length/item.keys.length;
+  const evidencePages=pagesContaining(item.keys);
+  const pageCoverage=notebook.pages.length ? evidencePages.length/notebook.pages.length : 0;
+
+  let score;
+  if(uniqueRatio>=.72)score=4;
+  else if(uniqueRatio>=.48)score=3;
+  else if(uniqueRatio>=.25)score=2;
+  else score=1;
+
+  /* Evidence-heavy criteria require more than a single generic mention. */
+  if(
+    ["Prototypes are documented","Test procedures are defined","Data is collected",
+     "Changes are traceable to results","Reflection appears throughout",
+     "Iteration is visible in sequence"].includes(item.name)
+    && keyHits.length<2
+  ){
+    score=Math.min(score,2);
+  }
+
+  /* A notebook with a broad record gets a small continuity benefit. */
+  if(
+    ["Record spans the season","Reflection appears throughout","Iteration is visible in sequence"].includes(item.name)
+    && notebook.pages.length<5
+  ){
+    score=Math.min(score,2);
+  }
+
+  /* Visual pages are surfaced for visual-heavy categories. */
+  const visualHeavy=["Brainstorming is documented","Prototypes are documented","Mechanisms are documented","Code is documented"];
+  const visualPageCount=notebook.pages.filter(p=>hasSubstantialVisualContent(p)).length;
+  if(visualHeavy.includes(item.name) && visualPageCount>=3 && score<4){
+    score=Math.min(4,score+1);
+  }
+
+  const reason =
+    score===4
+      ? `Strong evidence is present for ${item.name.toLowerCase()}. The record gives a judge useful information to evaluate this part of the engineering process.`
+      : score===3
+      ? `Good evidence is present for ${item.name.toLowerCase()}, but the documentation could be more complete, explicit, or connected to engineering results.`
+      : score===2
+      ? `Some evidence is present for ${item.name.toLowerCase()}, but a judge would likely need more concrete documentation to verify a stronger level.`
+      : `Little clear evidence was detected for ${item.name.toLowerCase()}. A judge may have difficulty verifying this part of the engineering process.`;
+
+  const tips=IMPROVEMENT_TIPS[item.name]||[
+    "Add concrete evidence rather than general statements.",
+    "Connect the entry to a specific engineering decision or result.",
+    "Keep the documentation dated and detailed."
+  ];
+
+  return {
+    name:item.name,
+    lookFor:item.lookFor,
+    score,
+    keyHits,
+    evidencePages,
+    totalOccurrences,
+    reason,
+    tips
+  };
+}
+
+function hasSubstantialVisualContent(page){
+  /*
+   * We already render every page as an image.
+   * This lightweight heuristic flags pages with little extractable
+   * text or a relatively high amount of dark/graphic content.
+   */
+  const textLength=(page.text||"").trim().length;
+  return textLength<260 || /cad|sketch|diagram|graph|photo|picture|screenshot/i.test(page.text||"");
+}
+
+const IMPROVEMENT_TIPS={
+  "Information is easy to reference":[
+    "Add a table of contents or index with useful entry/page references.",
+    "Number every page and use clear, consistent headings.",
+    "Make major design decisions easy for a judge to locate."
+  ],
+  "Contributors are identifiable":[
+    "Put a contributor name or initials on entries.",
+    "Identify who performed important tests, builds, and programming work.",
+    "Keep contributor identification consistent throughout the season."
+  ],
+  "Record spans the season":[
+    "Keep dated entries throughout the season instead of documenting everything at the end.",
+    "Record failed attempts, routine work, and small discoveries too.",
+    "Use dates and meeting entries to make the engineering timeline obvious."
+  ],
+  "Outside sources are credited":[
+    "Credit sources beside the research or outside material.",
+    "Identify websites, manuals, articles, and other references clearly.",
+    "Credit outside images, designs, or technical ideas when appropriate."
+  ],
+  "Criteria and constraints are defined":[
+    "State measurable criteria for success.",
+    "List the constraints that actually affect the design.",
+    "Explain how the criteria and constraints influence your solution."
+  ],
+  "Game strategy is documented":[
+    "Explain how the team plans to play matches.",
+    "Connect game strategy directly to robot capabilities.",
+    "Record strategic changes as testing and matches teach you more."
+  ],
+  "Brainstorming is documented":[
+    "Show multiple concepts before selecting the final approach.",
+    "Explain tradeoffs, pros/cons, or why an idea was rejected.",
+    "Use labeled sketches or diagrams so different ideas are easy to compare."
+  ],
+  "Prototypes are documented":[
+    "Show distinct connected versions or attempts.",
+    "Explain exactly what changed between versions and why.",
+    "Use photos, sketches, or CAD together with written engineering reasoning."
+  ],
+  "Test procedures are defined":[
+    "Describe exactly how each test was performed.",
+    "Record test conditions and what was measured.",
+    "Repeat tests consistently so versions can be compared fairly."
+  ],
+  "Data is collected":[
+    "Record actual measurements and results.",
+    "Use tables or graphs when they make comparisons clearer.",
+    "Compare versions using the same measurements whenever possible."
+  ],
+  "Decisions are explained with evidence":[
+    "State the decision clearly.",
+    "Point to the exact test result or observation behind it.",
+    "Explain why the selected option was better than the alternatives."
+  ],
+  "Mechanisms are documented":[
+    "Label robot photos and technical diagrams.",
+    "Include useful dimensions and relevant components.",
+    "Explain how the mechanism operates and why it was designed that way."
+  ],
+  "Code is documented":[
+    "Explain important programming changes.",
+    "Document autonomous routines, driver logic, and sensors.",
+    "Use pseudocode, flowcharts, screenshots, or meaningful code notes."
+  ],
+  "Changes are traceable to results":[
+    "Write the test result first.",
+    "Explain the problem that the result revealed.",
+    "Document the change and then record the retest result."
+  ],
+  "Reflection appears throughout":[
+    "Reflect after important build and test sessions.",
+    "Record failures and lessons as well as successes.",
+    "Finish major work with a clear next step."
+  ],
+  "Iteration is visible in sequence":[
+    "Show before-and-after versions.",
+    "Connect each iteration to the evidence from the previous one.",
+    "Explain why the next version was created."
+  ]
+};
+
+/* =========================================================
+   GRADING RENDER
+   ========================================================= */
+function gradeNotebook(){
+  gradeResults=[];
+  let total=0;
+
+  RUBRIC.forEach(section=>{
+    section.items.forEach(item=>{
+      const result=scoreCriterion(item);
+      gradeResults.push({
+        section:section.section,
+        sectionDescription:section.description,
+        ...result
+      });
+      total+=result.score;
+    });
+  });
+
+  const counts={
+    1:gradeResults.filter(r=>r.score===1).length,
+    2:gradeResults.filter(r=>r.score===2).length,
+    3:gradeResults.filter(r=>r.score===3).length,
+    4:gradeResults.filter(r=>r.score===4).length
+  };
+  const percent=Math.round((total/64)*100);
+
+  $("total").textContent=`${total}/64`;
+  $("percent").textContent=`${percent}%`;
+  $("oneCount").textContent=counts[1];
+  $("twoCount").textContent=counts[2];
+  $("threeCount").textContent=counts[3];
+  $("fourCount").textContent=counts[4];
+  $("scoreProgress").style.width=percent+"%";
+
+  const level =
+    percent>=90 ? "Very strong practice result."
+    : percent>=75 ? "Strong practice result with room for refinement."
+    : percent>=60 ? "Developing practice result; several areas need stronger evidence."
+    : "Significant documentation gaps were detected.";
+
+  $("overallSummary").textContent =
+    `${level} The notebook contains ${notebook.pages.length} rendered pages. `
+    + `The score is an automated practice estimate based on documented evidence, not an official judging decision.`;
+
+  renderSectionScorecards();
+  renderPriorities();
+  renderStrengthsWeaknesses();
+  renderCriteria();
+  $("results").classList.remove("hidden");
+}
+
+
+function renderSectionScorecards(){
+  const box=$("sectionScorecards");
+  box.innerHTML="";
+  RUBRIC.forEach(section=>{
+    const rows=gradeResults.filter(r=>r.section===section.section);
+    const earned=rows.reduce((sum,r)=>sum+r.score,0);
+    const possible=rows.length*4;
+    const percent=Math.round((earned/possible)*100);
+    const card=document.createElement("div");
+    card.className="section-scorecard";
+    card.innerHTML=`
+      <div class="section-scorecard-head">
+        <h3>${escapeHtml(section.section)}</h3>
+        <div class="section-total">${earned}/${possible}</div>
+      </div>
+      <div class="section-mini-bar"><div style="width:${percent}%"></div></div>
+      ${rows.map(r=>{
+        const dot=`dot${r.score}`;
+        return `<div class="subscore">
+          <div class="subscore-name"><span class="score-dot ${dot}"></span>${escapeHtml(r.name)}</div>
+          <div class="subscore-value s${r.score}">${r.score}/4</div>
+        </div>`;
+      }).join("")}
+    `;
+    box.appendChild(card);
+  });
+}
+
+function renderPriorities(){
+  const box=$("priorities");
+  const weakest=gradeResults.slice().sort((a,b)=>a.score-b.score).slice(0,3);
+  box.innerHTML=weakest.map((r,index)=>`
+    <div class="priority">
+      <b>${index+1}. ${escapeHtml(r.name)} — ${r.score}/4</b>
+      <span>${escapeHtml(r.tips[0]||"Add more concrete evidence.")}</span>
+    </div>
+  `).join("");
+}
+
+function renderStrengthsWeaknesses(){
+  const strengths=$("strengths");
+  const weaknesses=$("weaknesses");
+
+  const strong=gradeResults.filter(r=>r.score>=3).sort((a,b)=>b.score-a.score).slice(0,5);
+  const weak=gradeResults.filter(r=>r.score<=2).sort((a,b)=>a.score-b.score).slice(0,5);
+
+  strengths.innerHTML=strong.length
+    ? strong.map(r=>`<li><b>${escapeHtml(r.name)}</b> — ${r.score}/4</li>`).join("")
+    : "<li>No strong criteria detected yet.</li>";
+
+  weaknesses.innerHTML=weak.length
+    ? weak.map(r=>`<li><b>${escapeHtml(r.name)}</b> — ${r.score}/4</li>`).join("")
+    : "<li>No major weak criteria detected.</li>";
+}
+
+function renderCriteria(){
+  const box=$("criteria");
+  box.innerHTML="";
+  let currentSection="";
+
+  gradeResults.forEach((r,index)=>{
+    if(r.section!==currentSection){
+      const section=document.createElement("div");
+      section.className="section";
+      section.innerHTML=`
+        <div class="section-title">
+          <div>
+            <h2>${escapeHtml(r.section)}</h2>
+            <div class="small">${escapeHtml(r.sectionDescription)}</div>
+          </div>
+          <div class="section-score" id="section-score-${index}"></div>
+        </div>
+      `;
+      box.appendChild(section);
+      currentSection=r.section;
+    }
+
+    const div=document.createElement("div");
+    div.className="criterion";
+    div.dataset.index=String(index);
+
+    const evidenceChips=r.keyHits.length
+      ? r.keyHits.map(hit=>`<span class="chip">${escapeHtml(hit.key)} ×${hit.count}</span>`).join("")
+      : '<span class="small">No strong text evidence detected.</span>';
+
+    const pageLinks=r.evidencePages.length
+      ? r.evidencePages.map(p=>`<button class="page-link" data-page="${p}">Page ${p}</button>`).join("")
+      : '<span class="small">No text-matched page evidence.</span>';
+
+    div.innerHTML=`
+      <div class="criterion-head">
+        <div class="criterion-name">${index+1}. ${escapeHtml(r.name)}</div>
+        <div class="score s${r.score}">${r.score}/4</div>
+      </div>
+      <div class="criterion-body">
+        <div class="label">Judge-style comment</div>
+        <div class="judge-comment">${escapeHtml(r.reason)}</div>
+
+        <div class="label">Evidence detected in text</div>
+        <div class="box">${evidenceChips}</div>
+
+        <div class="label" style="margin-top:12px">Pages containing relevant information</div>
+        <div class="evidence-pages">
+          ${pageLinks}
+        </div>
+        <div class="page-evidence-help">
+          <span class="pill">Page references are based on matching notebook text.</span>
+          <span class="small">Click a page to inspect the actual page image below.</span>
+        </div>
+
+        <div class="rubricbox">
+          <b>What this criterion is looking for:</b>
+          ${escapeHtml(r.lookFor)}
+        </div>
+
+        <div class="improve">
+          <b>What you could do better:</b>
+          <ul>${r.tips.map(t=>`<li>${escapeHtml(t)}</li>`).join("")}</ul>
+        </div>
+
+        <div class="box">
+          <b>Visual notebook reminder:</b>
+          Photos, sketches, CAD, graphs, tables, handwriting, and screenshots are shown in the
+          Notebook Pages section below. Use the page buttons above to inspect the cited pages.
+        </div>
+
+        <div class="override">
+          <select class="override-score">
+            <option value="${r.score}">${r.score}/4 — automated</option>
+            <option value="4">4/4 — human override</option>
+            <option value="3">3/4 — human override</option>
+            <option value="2">2/4 — human override</option>
+            <option value="1">1/4 — human override</option>
+          </select>
+          <textarea class="override-note" placeholder="Human judge evidence/comment..."></textarea>
+        </div>
+      </div>
+    `;
+
+    box.appendChild(div);
+
+    div.querySelectorAll(".page-link").forEach(button=>{
+      button.addEventListener("click",()=>{
+        showPage(Number(button.dataset.page)-1);
+        $("viewerImage").scrollIntoView({behavior:"smooth",block:"center"});
+      });
+    });
+
+    div.querySelector(".override-score").addEventListener("change",e=>{
+      const score=e.target.value;
+      const span=div.querySelector(".score");
+      span.textContent=score+"/4";
+      span.className="score s"+score;
+      updateScorecardFromOverrides();
+      updateScorecardFromOverrides();
+    });
+
+    div.querySelector(".override-note").addEventListener("input",()=>{
+    });
+  });
+
+  updateSectionScores();
+}
+
+function updateSectionScores(){
+  let offset=0;
+  RUBRIC.forEach((section)=>{
+    const count=section.items.length;
+    const sum=gradeResults.slice(offset,offset+count).reduce((a,r)=>a+r.score,0);
+    const firstCriterionIndex=offset;
+    const scoreElement=document.getElementById(`section-score-${firstCriterionIndex}`);
+    if(scoreElement)scoreElement.textContent=`${sum}/${count*4}`;
+    offset+=count;
+  });
+}
+
+/* =========================================================
+   SAVE / LOAD
+   ========================================================= */
+
+/* =========================================================
+   GRADED REPORT
+   Uses the final visible scores, including human overrides.
+   ========================================================= */
+function getFinalScores(){
+  return gradeResults.map((r,index)=>{
+    const card=document.querySelectorAll(".criterion")[index];
+    const select=card?.querySelector(".override-score");
+    const note=card?.querySelector(".override-note");
+    const finalScore=select ? Number(select.value.split("/")[0]) : r.score;
+    return {...r,finalScore,humanNote:note?.value||""};
+  });
+}
+
+
+function buildReportData(){
+  const scores=getFinalScores();
+  const total=scores.reduce((sum,r)=>sum+r.finalScore,0);
+  const percent=(total/64*100).toFixed(1);
+  const sections=RUBRIC.map(section=>{
+    const rows=scores.filter(r=>r.section===section.section);
+    const earned=rows.reduce((sum,r)=>sum+r.finalScore,0);
+    return {section,rows,earned,possible:rows.length*4};
+  });
+  return {scores,total,percent,sections};
+}
+
+function renderReportPreview(){
+  if(!gradeResults.length){
+    toast("Grade the notebook first.");
+    return;
+  }
+
+  const data=buildReportData();
+  const preview=$("reportPreview");
+
+  const sectionRows=data.sections.map(s=>`
+    <tr>
+      <td>${escapeHtml(s.section.section)}</td>
+      <td><b>${s.earned}/${s.possible}</b></td>
+      <td>${Math.round(s.earned/s.possible*100)}%</td>
+    </tr>
+  `).join("");
+
+  const details=data.sections.map(s=>`
+    <div class="report-section">
+      <h3>${escapeHtml(s.section.section)} <span class="report-score">${s.earned}/${s.possible}</span></h3>
+      ${s.rows.map(r=>`
+        <div class="report-criterion">
+          <span class="report-score s${r.finalScore}">${r.finalScore}/4</span>
+          <b>${escapeHtml(r.name)}</b>
+          <div class="small" style="margin-top:4px">${escapeHtml(r.reason)}</div>
+          <div class="small" style="margin-top:4px">
+            Pages: ${r.evidencePages.length ? r.evidencePages.map(p=>`Page ${p}`).join(", ") : "No text-matched page evidence"}
+          </div>
+          ${r.humanNote ? `<div class="human-note" style="margin-top:7px"><b>Human note:</b> ${escapeHtml(r.humanNote)}</div>` : ""}
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+
+  preview.innerHTML=`
+    <h3>${escapeHtml($("notebookName").value||notebook.fileName||"Engineering Notebook")}</h3>
+    <div class="small">
+      Team: ${escapeHtml($("team").value||"Not provided")} ·
+      ${notebook.pages.length} pages reviewed ·
+      ${new Date().toLocaleDateString()}
+    </div>
+    <div style="font-size:34px;font-weight:900;margin:14px 0">${data.total}/64 <span class="small">${data.percent}%</span></div>
+    <table>
+      <thead><tr><th>Section</th><th>Score</th><th>Percent</th></tr></thead>
+      <tbody>${sectionRows}</tbody>
+    </table>
+    <div class="report-section">
+      <h3>Top Improvement Priorities</h3>
+      <ol>${data.scores.slice().sort((a,b)=>a.finalScore-b.finalScore).slice(0,3).map(r=>`
+        <li><b>${escapeHtml(r.name)} — ${r.finalScore}/4:</b> ${escapeHtml(r.tips[0]||"Add stronger evidence.")}</li>
+      `).join("")}</ol>
+    </div>
+    ${details}
+    <div class="report-section">
+      <h3>Final Judge Notes</h3>
+      <div>${escapeHtml($("judgeNotes").value||"No additional judge notes were entered.")}</div>
+    </div>
+  `;
+
+  $("reportCard").scrollIntoView({behavior:"smooth",block:"start"});
+  toast("Graded report updated.");
+}
+
+function generatePrintableReport(){
+  if(!gradeResults.length){
+    toast("Grade the notebook first.");
+    return;
+  }
+
+  renderReportPreview();
+
+  const data=buildReportData();
+  const popup=window.open("", "_blank", "width=1000,height=800");
+  if(!popup){
+    toast("Allow pop-ups to print the report.");
+    return;
+  }
+
+  const sections=data.sections.map(s=>`
+    <section class="section">
+      <h2>${escapeHtml(s.section.section)} <span>${s.earned}/${s.possible}</span></h2>
+      <p>${escapeHtml(s.section.description)}</p>
+      ${s.rows.map((r,i)=>`
+        <div class="criterion">
+          <div class="head"><b>${i+1}. ${escapeHtml(r.name)}</b><strong>${r.finalScore}/4</strong></div>
+          <p><b>Judge comment:</b> ${escapeHtml(r.reason)}</p>
+          <p><b>Relevant pages:</b> ${
+            r.evidencePages.length ? r.evidencePages.map(p=>`Page ${p}`).join(", ") : "No text-matched page evidence found."
+          }</p>
+          <p><b>What to do better:</b></p>
+          <ul>${r.tips.map(t=>`<li>${escapeHtml(t)}</li>`).join("")}</ul>
+          ${r.humanNote?`<div class="human"><b>Human judge note:</b> ${escapeHtml(r.humanNote)}</div>`:""}
+        </div>
+      `).join("")}
+    </section>
+  `).join("");
+
+  const popupHTML=`<!doctype html>
+<html><head><meta charset="UTF-8"><title>VEX Graded Report</title>
+<style>
+body{margin:0;background:#f3f5f8;color:#18202c;font-family:Arial,Helvetica,sans-serif}
+main{max-width:950px;margin:auto;background:#fff;min-height:100vh;padding:42px}
+header{border-bottom:3px solid #18202c;padding-bottom:18px}
+h1{margin:0;font-size:30px}h2{margin-top:28px;border-bottom:1px solid #d8dee7;padding-bottom:8px}
+h2 span{float:right}.meta{color:#5f6b7b;margin-top:7px}
+.hero{margin:24px 0;padding:22px;background:#edf5ff;border:1px solid #bdd5f3;border-radius:12px}
+.big{font-size:44px;font-weight:900}
+table{width:100%;border-collapse:collapse;margin:14px 0 25px}
+th,td{padding:10px;text-align:left;border-bottom:1px solid #dce1e8}
+th{background:#eef1f5}.criterion{border:1px solid #d8dee7;border-radius:9px;padding:13px;margin:10px 0;break-inside:avoid}
+.head{display:flex;justify-content:space-between;gap:15px}.head strong{font-size:19px}
+.human{background:#fff5cf;border:1px solid #e4cf79;border-radius:7px;padding:9px}
+.footer{margin-top:30px;border-top:1px solid #ddd;padding-top:12px;color:#697586;font-size:12px}
+button{padding:10px 16px;border:0;border-radius:7px;background:#1677d2;color:#fff;font-weight:bold}
+@media print{button{display:none}body{background:#fff}main{padding:20px}}
+</style></head><body><main>
+<header>
+<h1>VEX Engineering Notebook Graded Report</h1>
+<div class="meta"><b>Team:</b> ${escapeHtml($("team").value||"Not provided")} · <b>Notebook:</b> ${escapeHtml($("notebookName").value||notebook.fileName||"Engineering Notebook")}</div>
+<div class="meta"><b>Pages reviewed:</b> ${notebook.pages.length} · <b>Date:</b> ${new Date().toLocaleDateString()}</div>
+</header>
+<div class="hero"><div class="big">${data.total}/64</div><b>${data.percent}%</b> overall practice score</div>
+<h2>Section Scores</h2>
+<table><thead><tr><th>Rubric Section</th><th>Score</th><th>Percent</th></tr></thead><tbody>
+${data.sections.map(s=>`<tr><td>${escapeHtml(s.section.section)}</td><td><b>${s.earned}/${s.possible}</b></td><td>${Math.round(s.earned/s.possible*100)}%</td></tr>`).join("")}
+</tbody></table>
+<h2>Top Improvement Priorities</h2>
+<ol>${data.scores.slice().sort((a,b)=>a.finalScore-b.finalScore).slice(0,3).map(r=>`<li><b>${escapeHtml(r.name)} — ${r.finalScore}/4:</b> ${escapeHtml(r.tips[0]||"Add stronger evidence.")}</li>`).join("")}</ol>
+<h2>Detailed Rubric Assessment</h2>
+${sections}
+<h2>Final Judge Notes</h2><p>${escapeHtml($("judgeNotes").value||"No additional judge notes were entered.")}</p>
+<div class="footer">Practice/self-evaluation report based on the VEX Engineering Notebook rubric. Not an official VEX judging decision.<br><br><button onclick="window.print()">Print / Save as PDF</button></div>
+</main></body></html>`;
+
+  popup.document.open();
+  popup.document.write(popupHTML);
+  popup.document.close();
+  setTimeout(()=>popup.focus(),300);
+}
+
+/* =========================================================
+   REPORT BUTTONS
+   ========================================================= */
+$("reportBtn").addEventListener("click",renderReportPreview);
+$("generateReportInline").addEventListener("click",renderReportPreview);
+$("printReportInline").addEventListener("click",generatePrintableReport);
+
+/* =========================================================
+   SCORECARD UPDATE AFTER HUMAN OVERRIDES
+   ========================================================= */
+function updateScorecardFromOverrides(){
+  if(!gradeResults.length)return;
+  const scores=getFinalScores();
+  const total=scores.reduce((sum,r)=>sum+r.finalScore,0);
+  const percent=Math.round(total/64*100);
+
+  $("total").textContent=`${total}/64`;
+  $("percent").textContent=`${percent}%`;
+  $("scoreProgress").style.width=percent+"%";
+
+  [1,2,3,4].forEach(n=>{
+    const id=n===1?"oneCount":n===2?"twoCount":n===3?"threeCount":"fourCount";
+    $(id).textContent=scores.filter(r=>r.finalScore===n).length;
+  });
+
+  const box=$("sectionScorecards");
+  if(!box)return;
+  box.innerHTML="";
+
+  RUBRIC.forEach(section=>{
+    const rows=scores.filter(r=>r.section===section.section);
+    const earned=rows.reduce((sum,r)=>sum+r.finalScore,0);
+    const possible=rows.length*4;
+    const pct=Math.round(earned/possible*100);
+
+    const card=document.createElement("div");
+    card.className="section-scorecard";
+    card.innerHTML=`
+      <div class="section-scorecard-head">
+        <h3>${escapeHtml(section.section)}</h3>
+        <div class="section-total">${earned}/${possible}</div>
+      </div>
+      <div class="section-mini-bar"><div style="width:${pct}%"></div></div>
+      ${rows.map(r=>`
+        <div class="subscore">
+          <div class="subscore-name"><span class="score-dot dot${r.finalScore}"></span>${escapeHtml(r.name)}</div>
+          <div class="subscore-value s${r.finalScore}">${r.finalScore}/4</div>
+        </div>
+      `).join("")}
+    `;
+    box.appendChild(card);
+  });
+}
+
+/* =========================================================
+   KEYBOARD CONTROLS
+   ========================================================= */
+document.addEventListener("keydown",e=>{
+  if(e.target.matches("input,textarea,select"))return;
+  if(e.key==="ArrowLeft")showPage(currentPage-1);
+  if(e.key==="ArrowRight")showPage(currentPage+1);
+  if(e.key==="+"){$("zoomIn").click()}
+  if(e.key==="-"){$("zoomOut").click()}
+  if(e.key==="Home")showPage(0);
+  if(e.key==="End")showPage(notebook.pages.length-1);
+});
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+gradeBtn.addEventListener("click",()=>{
+  if(!notebook.pages.length){
+    toast("Upload a notebook first.");
+    return;
+  }
+  gradeNotebook();
+  toast("Notebook graded.");
+});
+
+$("clearBtn").addEventListener("click",()=>{
+  if(!confirm("Clear the current notebook and grading session?"))return;
+  localStorage.removeItem("vexNotebookJudgeSession");
+  location.reload();
+});
+
+
+/* =========================================================
+   QUICK NAVIGATION
+   ========================================================= */
+document.querySelectorAll("#quickNav button").forEach(button=>{
+  button.addEventListener("click",()=>{
+    const target=$(button.dataset.target);
+    if(target)target.scrollIntoView({behavior:"smooth",block:"start"});
+    document.querySelectorAll("#quickNav button").forEach(b=>b.classList.remove("active"));
+    button.classList.add("active");
+  });
+});
+
+/* =========================================================
+   INITIAL UI
+   ========================================================= */
+$("results").classList.add("hidden");
+</script>
+</body>
+</html>
